@@ -20,14 +20,24 @@ public class Program
             string username = configuration.GetConnectionString("USERNAME");
             string password = configuration.GetConnectionString("PASSWORD");
 
-            string connectionString = $@"Data Source=${serverName};
-                                    Initial Catalog=${database};
-                                    User ID=${username};
-                                    Password=${password}";
+            string connectionString = $"Data Source={serverName};Initial Catalog={database};User ID={username};Password={password}";
 
             using (SqlConnection connection = new SqlConnection(connectionString))
             {
-                Console.WriteLine("Connected to database successfully!");
+                string query = @"select productName,price from product";
+                connection.Open();
+                SqlCommand command = new SqlCommand(query, connection);
+                SqlDataReader product = command.ExecuteReader();
+                while(product.Read()) {
+                    Console.WriteLine("Name: {0}     Price: {1}",product.GetValue(0), product.GetValue(1));
+                }
+                product.Close();
+
+                string query1 = "select max(price) from product";
+                SqlCommand command1 = new SqlCommand(query1,connection);
+                var price = command1.ExecuteScalar();
+                Console.WriteLine("Max Price: " + price.ToString());
+                
             }
         }
         catch (Exception e)
