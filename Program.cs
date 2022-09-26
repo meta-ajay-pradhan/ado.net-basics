@@ -29,79 +29,26 @@ public class Program
 
             using (SqlConnection connection = new SqlConnection(connectionString))
             {
-                //Select Command
-                SqlCommand select = new SqlCommand("select id, place from useraddress", connection);
-                int id;
                 connection.Open();
-                Console.WriteLine("Initial Table Data:");
-                DisplayReader(select.ExecuteReader());
-                connection.Close();
-                //Insert
-                SqlCommand insertCommand = new SqlCommand() {
-                    CommandText = "spAddAddress",
-                    Connection = connection,
-                    CommandType = CommandType.StoredProcedure
-                };
-                SqlParameter place = new SqlParameter {
-                    ParameterName = "@place",
-                    SqlDbType = SqlDbType.VarChar,
-                    Value = "Mumbai",
-                    Direction = ParameterDirection.Input
-                };
-                SqlParameter ids = new SqlParameter {
-                    ParameterName = "@id",
-                    SqlDbType = SqlDbType.Int,
-                    Direction = ParameterDirection.Output
-                };
-                insertCommand.Parameters.Add(place);
-                insertCommand.Parameters.Add(ids);
-                connection.Open();
-                insertCommand.ExecuteNonQuery();
-                Console.WriteLine("\nTable after insertion");
-                DisplayReader(select.ExecuteReader());
-                connection.Close();
-                string? idTemp = ids.Value!.ToString();
-                if(idTemp == null) {
-                    throw new Exception("Failed");
+                SqlTransaction transaction = connection.BeginTransaction();
+
+                try {
+                    SqlCommand cmd = new SqlCommand("Update accounts set balance = balance-500 where accountnumber = 'Account1'",
+                    connection,
+                    transaction);
+                    cmd.ExecuteNonQuery();
+
+                    cmd = new SqlCommand("Update accounts set balance = balance + 500 where accountnumber = 'Account2'",
+                    connection,
+                    transaction
+                    );
+                    cmd.ExecuteNonQuery();
+                    transaction.Commit();
+                    Console.WriteLine("Transaction Commited");
+                } catch (Exception e) {
+                    transaction.Rollback();
+                    Console.WriteLine(e.Message);
                 }
-                id = int.Parse(idTemp);
-                Console.WriteLine(id);
-
-                //Update
-                
-                SqlCommand updateCommand = new SqlCommand (){
-                    CommandText = "spUpdateAddress",
-                    Connection = connection,
-                    CommandType = CommandType.StoredProcedure
-                };
-
-                updateCommand.Parameters.AddWithValue("@place","Bombay");
-                updateCommand.Parameters.AddWithValue("@id", id);
-
-                connection.Open();
-                Console.WriteLine("\nTable after updation");
-                updateCommand.ExecuteNonQuery();
-                DisplayReader(select.ExecuteReader());
-                connection.Close();
-
-
-
-                //Delete
-                SqlCommand deleteCommand = new SqlCommand(){
-                    CommandText = "spDeleteAddress",
-                    Connection = connection,
-                    CommandType = CommandType.StoredProcedure
-                };
-
-                deleteCommand.Parameters.AddWithValue("@id", id);
-
-                connection.Open();
-                Console.WriteLine("\nTable after deletion");
-                deleteCommand.ExecuteNonQuery();
-                DisplayReader(select.ExecuteReader());
-                connection.Close();
-                
-                
             }
         }
         catch (Exception e)
