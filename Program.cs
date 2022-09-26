@@ -5,6 +5,11 @@ using System.Data;
 namespace adoDotNetBasics;
 public class Program
 {
+    public static void DisplayReader(SqlDataReader address) {
+        while(address.Read()) {
+            Console.WriteLine("id: ${0}, place: ${1}", address[0], address[1]);
+        }
+    }
     public static void Main(string[] args)
     {
         try
@@ -24,55 +29,84 @@ public class Program
 
             using (SqlConnection connection = new SqlConnection(connectionString))
             {
-                //Create DataSet
-                string query = "Select id,username from Users";
-                DataSet ds = new DataSet();
-                SqlDataAdapter adapter = new SqlDataAdapter(query, connection);
-                adapter.Fill(ds);
-
-                DataTable table = ds.Tables[0];
-
+                //Select Command
+                SqlCommand select = new SqlCommand("select id, place from useraddress", connection);
+                int id;
+                connection.Open();
+                Console.WriteLine("Initial Table Data:");
+                DisplayReader(select.ExecuteReader());
+                connection.Close();
                 //Insert
-                table.Rows.Add(2, "Nikhil");
-                table.Rows.Add(1, "Debjyoti");
-                table.Rows.Add(3, "Rakshak");
-                table.Rows.Add(4, "Ritik");
-                table.Rows.Add(5, "Rahul");
-                table.Rows.Add(6, "Alan");
-                table.Rows.Add(7, "Karan");
+                SqlCommand insertCommand = new SqlCommand() {
+                    CommandText = "spAddAddress",
+                    Connection = connection,
+                    CommandType = CommandType.StoredProcedure
+                };
+                SqlParameter place = new SqlParameter {
+                    ParameterName = "@place",
+                    SqlDbType = SqlDbType.VarChar,
+                    Value = "Mumbai",
+                    Direction = ParameterDirection.Input
+                };
+                SqlParameter ids = new SqlParameter {
+                    ParameterName = "@id",
+                    SqlDbType = SqlDbType.Int,
+                    Direction = ParameterDirection.Output
+                };
+                insertCommand.Parameters.Add(place);
+                insertCommand.Parameters.Add(ids);
+                connection.Open();
+                insertCommand.ExecuteNonQuery();
+                Console.WriteLine("\nTable after insertion");
+                DisplayReader(select.ExecuteReader());
+                connection.Close();
+                string? idTemp = ids.Value!.ToString();
+                if(idTemp == null) {
+                    throw new Exception("Failed");
+                }
+                id = int.Parse(idTemp);
+                Console.WriteLine(id);
 
-                DataRow[]? rows = table.Select();
+                //Update
+                
+                SqlCommand updateCommand = new SqlCommand (){
+                    CommandText = "spUpdateAddress",
+                    Connection = connection,
+                    CommandType = CommandType.StoredProcedure
+                };
+
+                updateCommand.Parameters.AddWithValue("@place","Bombay");
+                updateCommand.Parameters.AddWithValue("@id", id);
+
+                connection.Open();
+                Console.WriteLine("\nTable after updation");
+                updateCommand.ExecuteNonQuery();
+                DisplayReader(select.ExecuteReader());
+                connection.Close();
+
+
 
                 //Delete
-                foreach(DataRow row in rows) {
-                    if(row["id"].ToString() == "7") {
-                        row.Delete();
-                        break;
-                    }
-                }
+                SqlCommand deleteCommand = new SqlCommand(){
+                    CommandText = "spDeleteAddress",
+                    Connection = connection,
+                    CommandType = CommandType.StoredProcedure
+                };
+
+                deleteCommand.Parameters.AddWithValue("@id", id);
+
+                connection.Open();
+                Console.WriteLine("\nTable after deletion");
+                deleteCommand.ExecuteNonQuery();
+                DisplayReader(select.ExecuteReader());
+                connection.Close();
                 
-                //Update
-                rows = table.Select();
-
-                foreach(DataRow row in rows) {
-                    if(row["id"].ToString() == "6") {
-                        row["username"] = "Rajeshwar";
-                        break;
-                    }
-                }
-
-                //Select
-                rows = table.Select();
-
-                foreach(DataRow row in rows) {
-                    Console.WriteLine("id: {0}, name: {1}", row["id"].ToString(), row["username"].ToString());
-                }
+                
             }
         }
         catch (Exception e)
         {
             Console.WriteLine(e.Message);
-            throw e;
         }
 
     }
